@@ -56,5 +56,5 @@ jobs:
         with:
           app-name: 'avrahamgrossapriori'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_02D2DAEF9D2B4900A9461097BBA24A4E }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E7A0F211FB584C49993E54061C5E3325 }}
           package: .
