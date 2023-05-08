@@ -11,5 +11,5 @@ class OneProduct extends Model
 
     protected $fillable = ['id', 'apple', 'bread', 'butter', 'cheese', 'corn', 'dill', 'eggs', 
     'ice_cream', 'kidney_bean', 'milk', 'nutmeg', 'onion', 'sugar', 'unicorn', 'yogurt', 'chocolate', 
-    'support', 'confidence'];
+    'support'];
 }

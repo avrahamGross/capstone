@@ -30,7 +30,6 @@ return new class extends Migration
             $table->tinyInteger('yogurt')->default(0);
             $table->tinyInteger('chocolate')->default(0);
             $table->decimal('support', 5, 3, true);
-            $table->decimal('confidence', 5, 3, true);
             $table->timestamps();
         });
     }
