@@ -38,6 +38,7 @@ class TransactionController extends Controller
         }
         $labels  = [];
         $support = 0.4;
+        $total_transactions = Transaction::count();
         while ($support > 0.04) {
             $confidence = 0.5;
             while ($confidence > 0.04) {
@@ -48,16 +49,21 @@ class TransactionController extends Controller
                     if ($index === 1) {
                         continue;
                     }
-                    foreach ($count_items as $key => $selction) {
-                        $insert_list = array_fill_keys($selction, 1);
-                        $support_confidence['support'] = $support;
-                        $support_confidence['confidence'] = $confidence;
-                        $tables[$index - 2]::firstOrCreate($insert_list, $support_confidence);
+                    foreach ($count_items as $key => $selection) {
+                        $insert_list = array_fill_keys($selection, 1);
+                        $this_support = Transaction::where($insert_list)->count();
+                        $final_support = $this_support / $total_transactions;
+                        // $insert_list['support'] = 
+                        $already_there = $tables[$index - 2]::where($insert_list)->first();
+                        if ($already_there && $already_there->support > $final_support) {
+                            continue;
+                        }
+                        $tables[$index - 2]::updateOrCreate($insert_list, ['support' => $final_support]);
                     }
                 }
-                $confidence = $confidence - 0.01;
+                $confidence = $confidence - 0.05;
             }
-            $support = $support - 0.01;
+            $support = $support - 0.05;
         }
     }
 
@@ -104,7 +110,6 @@ class TransactionController extends Controller
             foreach ($options as $option) {
                 $result = $tables[$index]::where($option)
                     ->orderBy('support', 'desc')
-                    ->orderBy('confidence', 'desc')
                     ->limit(3)
                     ->get()
                     ->toArray();
@@ -122,13 +127,12 @@ class TransactionController extends Controller
         }
         $single_level = new Collection($single_level);
         $single_level = $single_level->sortBy([
-            ['support', 'desc'],
-            ['confidence', 'desc']
+            ['support', 'desc']
         ]);
         $temp = $single_level->slice(0, 3)->toArray();
 
         foreach ($temp as $object) {
-            array_push($results, ['item' => array_keys($object, 1), 's&c' => array_intersect_key($object, array_flip(array('support', 'confidence')))]);
+            array_push($results, ['item' => array_keys($object, 1), 's&c' => array_intersect_key($object, array_flip(array('support')))]);
         }
 
         $recommendations = array();
@@ -146,7 +150,8 @@ class TransactionController extends Controller
         $incrementing = 0;
         foreach ($recommendations as $key => $value) {
             $result[$value] = $results[$key]['s&c'];
-            array_push($result[$value], $this->lift_calculator($multi_array[2][0], $results[$key]['s&c']['confidence']));
+            array_push($result[$value], $this->lift_calculator($multi_array[2][0], $value));
+            $result[$value]['confidence'] = $this->confidence_calculator($results[$key]['s&c']['support'], $multi_array[2][0]);
         }
 
         $last = array_pop($validated);
@@ -176,10 +181,22 @@ class TransactionController extends Controller
         ]);
     }
 
-    private function lift_calculator($selected, $confidence) {
-        $transactions_with_selected = Transaction::where($selected)->count();
+    private function confidence_calculator($support, $selected) {
         $total_transactions = Transaction::count();
-        $lift = $confidence / ($transactions_with_selected/$total_transactions);
+        $selected_support = Transaction::where($selected)->count() / $total_transactions;
+        $confidence = $support / $selected_support;
+        return $confidence;
+    }
+
+    private function lift_calculator($selected, $recommened) {
+        $total_transactions = Transaction::count();
+        $support_selected = Transaction::where($selected)->count() / $total_transactions;
+        $support_recommended = Transaction::where([$recommened => 1])->count() / $total_transactions;
+        $over_value = $support_selected * $support_recommended;
+        $selected[$recommened] = 1;
+        $transactions_with_recommended = Transaction::where($selected)->count() / $total_transactions;
+        
+        $lift = $transactions_with_recommended / $over_value;
         return $lift;
     }
 
